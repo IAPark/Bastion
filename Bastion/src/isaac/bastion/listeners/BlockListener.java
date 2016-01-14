@@ -1,13 +1,9 @@
 package isaac.bastion.listeners;
 
 
-import isaac.bastion.Bastion;
-import isaac.bastion.commands.PlayersStates;
-import isaac.bastion.commands.PlayersStates.Mode;
-import isaac.bastion.manager.BastionBlockManager;
-import isaac.bastion.manager.ConfigManager;
 
-import org.bukkit.ChatColor;
+import isaac.bastion.manager.BastionBlockManager;
+
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -19,21 +15,13 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.player.PlayerBucketEmptyEvent;
 import org.bukkit.event.world.StructureGrowEvent;
 
-import vg.civcraft.mc.citadel.events.ReinforcementCreationEvent;
-import vg.civcraft.mc.citadel.reinforcement.PlayerReinforcement;
-import vg.civcraft.mc.namelayer.group.groups.PublicGroup;
-
-
-public final class BastionListener
-implements Listener
+public final class BlockListener implements Listener
 {
 	private BastionBlockManager bastionManager;
-	private ConfigManager config;
 
-	public BastionListener()
+	public BlockListener(BastionBlockManager bastionManager)
 	{
-		bastionManager = Bastion.getBastionManager();
-		config=Bastion.getConfigManager();
+		this.bastionManager = bastionManager;
 	}
 	@EventHandler(ignoreCancelled = true, priority = EventPriority.LOW)
 	public void onBlockPlace(BlockPlaceEvent event) {
@@ -66,26 +54,5 @@ implements Listener
 	@EventHandler (ignoreCancelled = true)
 	public void onBlockBreak(BlockBreakEvent event) {
 		bastionManager.handleBlockBreakEvent(event);
-	}
-	@EventHandler
-	public void onReinforcement(ReinforcementCreationEvent event) {
-
-		if (event.getBlock().getType() == config.getBastionBlockMaterial() && 
-				!PlayersStates.playerInMode(event.getPlayer(), Mode.OFF) && event.getReinforcement() instanceof PlayerReinforcement) {
-			PlayersStates.touchPlayer(event.getPlayer());
-			PlayerReinforcement rein = (PlayerReinforcement) event.getReinforcement();
-			if (rein.getGroup() instanceof PublicGroup){
-				event.setCancelled(true);
-				event.getPlayer().sendMessage(ChatColor.GREEN + "Bastion's cannot be reinforced under a PublicGroup.");
-			}
-			else{
-				bastionManager.addBastion(event.getBlock().getLocation(), rein);
-				event.getPlayer().sendMessage(ChatColor.GREEN+"Bastion block created");
-			}
-		}
-	}
-	public BastionBlockManager getBastionManager(){
-		return bastionManager;
-
 	}
 }

@@ -8,7 +8,8 @@ import java.util.logging.Level;
 import isaac.bastion.commands.BastionCommandManager;
 import isaac.bastion.commands.ModeChangeCommand;
 import isaac.bastion.commands.PlayersStates.Mode;
-import isaac.bastion.listeners.BastionListener;
+import isaac.bastion.listeners.BastionCreationListener;
+import isaac.bastion.listeners.BlockListener;
 import isaac.bastion.listeners.CommandListener;
 import isaac.bastion.listeners.EnderPearlListener;
 import isaac.bastion.manager.BastionBlockManager;
@@ -24,9 +25,10 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 public final class Bastion extends JavaPlugin
 {
-	private static BastionListener listener; ///Main listener
-	private static Bastion plugin; ///Holds the plugin
-	private static BastionBlockManager bastionManager; ///Most of the direct interaction with Bastions
+	private static BlockListener blockListener; /// listenerfor blocks being moved and placed
+	private BastionCreationListener bastionCreationListener; /// Listener to detect reinforcement of a Bastion Block
+	private static Bastion plugin; ///Allows static access to the plugin. Todo remove requirement for static variables
+	private static BastionBlockManager bastionManager; /// Manages most interactions with bastion blocks
 	private static ConfigManager config; ///Holds the configuration
 	
 	public void onEnable()
@@ -35,7 +37,9 @@ public final class Bastion extends JavaPlugin
 		plugin = this;
 		config = new ConfigManager();
 		bastionManager = new BastionBlockManager();
-		listener = new BastionListener();
+		blockListener = new BlockListener(bastionManager);
+		bastionCreationListener = new BastionCreationListener(config.getBastionBlockMaterial(), bastionManager);
+
 		
 		removeGhostBlocks();
 		
@@ -48,7 +52,7 @@ public final class Bastion extends JavaPlugin
 	
 	//What the name says
 	private void registerListeners(){
-		getServer().getPluginManager().registerEvents(listener, this);
+		getServer().getPluginManager().registerEvents(blockListener, this);
 		getServer().getPluginManager().registerEvents(new CommandListener(), this);
 		if(config.getEnderPearlsBlocked()) //currently everything to do with blocking pearls is part of EnderPearlListener. Needs changed
 			getServer().getPluginManager().registerEvents(new EnderPearlListener(), this);
@@ -82,9 +86,9 @@ public final class Bastion extends JavaPlugin
 	{
 		return plugin;
 	}
-	public static BastionListener getBastionBlockListener()
+	public static BlockListener getBastionBlockListener()
 	{
-		return listener;
+		return blockListener;
 	}
 	public static ConfigManager getConfigManager(){
 		return config;
