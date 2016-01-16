@@ -7,13 +7,8 @@ import isaac.bastion.manager.EnderPearlManager;
 import isaac.bastion.util.QTBox;
 import isaac.bastion.util.SparseQuadTree;
 
-import java.util.Collection;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -81,7 +76,6 @@ Iterable<BastionBlock> {
 
     public Set<QTBox> forLocation(Location loc){
         return blocks.get(loc.getWorld()).find(loc.getBlockX(), loc.getBlockZ());
-
     }
 
 
@@ -101,6 +95,44 @@ Iterable<BastionBlock> {
         }
         return result;
     }
+
+    // Get all Bastions that cover a location
+    public Set<BastionBlock> getFields(Location loc){
+        Set<? extends QTBox> boxes = blocks.get(loc.getWorld()).find(loc.getBlockX(), loc.getBlockZ());
+        Set<BastionBlock> bastions = null;
+
+        if(boxes.size() > 0 && boxes.iterator().next() instanceof BastionBlock) {
+            bastions = (Set<BastionBlock>) boxes;
+        }
+
+        if(bastions == null)
+            return new CopyOnWriteArraySet<BastionBlock>();
+
+        Iterator<BastionBlock> i = bastions.iterator();
+
+        while (i.hasNext()){
+            BastionBlock bastion = i.next();
+            if (!bastion.inField(loc)){
+                i.remove();
+            }
+        };
+        return bastions;
+    }
+
+    // Get Bastions that protect the location from all the players
+    public Set<BastionBlock> getBlockingBastions(Location loc, List<UUID> players){
+        Set<BastionBlock> bastions = getFields(loc);
+
+        for (Iterator<BastionBlock> i = bastions.iterator(); i.hasNext();) {
+            if (!i.next().oneCanPlace(players)) {
+                i.remove();
+            }
+        }
+
+        return bastions;
+    }
+
+
     public BastionBlock getBastionBlock(Location loc) {
         Set<? extends QTBox> possible=forLocation(loc);
         for(QTBox box: possible){

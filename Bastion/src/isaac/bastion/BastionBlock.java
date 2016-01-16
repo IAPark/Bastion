@@ -9,10 +9,7 @@ import isaac.bastion.util.QTBox;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Random;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.logging.Level;
 
 import org.bukkit.Bukkit;
@@ -253,7 +250,7 @@ public class BastionBlock implements QTBox, Comparable<BastionBlock>
 		return false;
 	}
 
-	public boolean oneCanPlace(Set<UUID> players){
+	public boolean oneCanPlace(List<UUID> players){
 		PlayerReinforcement reinforcement = getReinforcement();
 		//the object will have been closed if null but we still don't want things to crash
 		if (reinforcement == null)
