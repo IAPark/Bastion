@@ -29,6 +29,9 @@ import org.bukkit.material.Dispenser;
 
 import vg.civcraft.mc.citadel.Citadel;
 import vg.civcraft.mc.citadel.reinforcement.PlayerReinforcement;
+import vg.civcraft.mc.citadel.reinforcement.Reinforcement;
+
+import javax.annotation.Nullable;
 
 
 public class BastionBlockManager
@@ -91,33 +94,45 @@ public class BastionBlockManager
 		
 		return false;
 	}
-	
 
-	//handles all block based events in a general way
-	public Set<BastionBlock> shouldStopBlock(Block origin, Set<Block> result, UUID player){
-		if(player != null) {
-			Player playerB = Bukkit.getPlayer(player);
-			if (playerB != null && playerB.hasPermission("Bastion.bypass")) return new CopyOnWriteArraySet<BastionBlock>();
+
+    /**
+     * Handles all block based events in as general a way as possible
+     * @param origin The block that caused the event
+     * @param result The block that got added as a result of this event
+     * @param playerUUID The playerUUID responsible for the event when known
+     * @return All the Bastion blocks that would prevent the action
+     */
+	public Set<BastionBlock> shouldStopBlock(@Nullable Block origin, Set<Block> result, @Nullable UUID playerUUID){
+
+        // check if the player can bypass permission and exclude them from farther checks if they do
+		if(playerUUID != null) {
+			Player player = Bukkit.getPlayer(playerUUID);
+			if (player != null && player.hasPermission("Bastion.bypass")) return new CopyOnWriteArraySet<BastionBlock>();
 		}
 		
 		Set<BastionBlock> toReturn = new HashSet<BastionBlock>();
+
 		List<UUID> accessors = new LinkedList<>();
-		if(player != null)
-			accessors.add(player);
+		if(playerUUID != null) {
+            accessors.add(playerUUID);
+        }
 		
 		if(origin != null){
-			PlayerReinforcement reinforcement = (PlayerReinforcement) Citadel.getReinforcementManager().
-			getReinforcement(origin);
-			if(reinforcement instanceof PlayerReinforcement)
-				accessors.add(reinforcement.getGroup().getOwner());
+			Reinforcement reinforcement = Citadel.getReinforcementManager().getReinforcement(origin);
+			if(reinforcement instanceof PlayerReinforcement) {
+                PlayerReinforcement playerReinforcement = (PlayerReinforcement) reinforcement;
+                accessors.add(playerReinforcement.getGroup().getOwner());
+            }
 			
 			for(BastionBlock bastion: set.getFields(origin.getLocation()))
 				accessors.add(bastion.getOwner());
 		}
 		
 		
-		for(Block block: result)
-			toReturn.addAll(set.getBlockingBastions(block.getLocation(), accessors));
+		for(Block block: result) {
+            toReturn.addAll(set.getBlockingBastions(block.getLocation(), accessors));
+        }
 		
 		
 		return toReturn;
