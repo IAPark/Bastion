@@ -1,6 +1,5 @@
 package isaac.bastion.storage;
 
-import isaac.bastion.Bastion;
 import isaac.bastion.BastionBlock;
 import isaac.bastion.manager.ConfigManager;
 

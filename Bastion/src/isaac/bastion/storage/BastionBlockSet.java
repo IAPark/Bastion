@@ -1,7 +1,5 @@
 package isaac.bastion.storage;
 
-import com.avaje.ebean.validation.NotNull;
-import isaac.bastion.Bastion;
 import isaac.bastion.BastionBlock;
 import isaac.bastion.manager.ConfigManager;
 import isaac.bastion.manager.EnderPearlManager;
@@ -16,7 +14,6 @@ import java.util.logging.Logger;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
-import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitScheduler;
 
 public class BastionBlockSet implements Set<BastionBlock>,
@@ -155,7 +152,7 @@ Iterable<BastionBlock> {
         int count = changed.size();
         for(BastionBlock toUpdate: changed) toUpdate.update(storage);
         changed.clear();
-        Bastion.getPlugin().getLogger().info("updated " + count + " blocks");
+        logger.info("updated " + count + " blocks");
         return count;
     }
 
