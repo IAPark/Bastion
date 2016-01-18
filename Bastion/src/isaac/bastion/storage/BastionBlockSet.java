@@ -1,5 +1,6 @@
 package isaac.bastion.storage;
 
+import com.avaje.ebean.validation.NotNull;
 import isaac.bastion.Bastion;
 import isaac.bastion.BastionBlock;
 import isaac.bastion.manager.ConfigManager;
@@ -9,6 +10,8 @@ import isaac.bastion.util.SparseQuadTree;
 
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -24,26 +27,19 @@ Iterable<BastionBlock> {
     private BastionBlockStorage storage;
     private int task;
     private ConfigManager config;
+    private Logger logger;
 
 
-    public BastionBlockSet() {
-        storage=new BastionBlockStorage();
-        changed=new TreeSet<BastionBlock>();
-        config=Bastion.getConfigManager();
+    public BastionBlockSet(BastionBlockStorage storage, ConfigManager config, Logger logger) {
+        this.storage = storage;
+        changed = new HashSet<>();
+        this.config = config;
+        this.logger = logger;
 
-        blocks=new HashMap<World, SparseQuadTree>();
-        bastionBlocks=new TreeSet<BastionBlock>();
+        blocks = new HashMap<World, SparseQuadTree>();
+        bastionBlocks = new TreeSet<BastionBlock>();
 
-        if(Bastion.getPlugin().isEnabled()){
-            BukkitScheduler scheduler = Bukkit.getServer().getScheduler();
-            task=scheduler.scheduleSyncRepeatingTask(Bastion.getPlugin(),
-                    new BukkitRunnable(){
-                public void run(){
-                    update();
-                }
-            },config.getTimeBetweenSaves(),config.getTimeBetweenSaves());
-        }
-        BastionBlock.set=this;
+        BastionBlock.set = this;
     }
 
     // note only for BastionBlocks already in db
@@ -72,6 +68,18 @@ Iterable<BastionBlock> {
             }
             blocks.put(world, bastionsForWorld);
         }
+    }
+
+    public void removeGhostBlocks(){
+        Bukkit.getLogger().log(Level.INFO, "Bastion is beginning ghost block check.");
+        for (BastionBlock block: this){
+            if (block.getLocation().getBlock().getType() != config.getBastionBlockMaterial()){
+                Bukkit.getLogger().log(Level.INFO, "Bastion removed a block at: " + block.getLocation() + ". If it is still"
+                        + " there, there is a problem...");
+                block.delete(storage);
+            }
+        }
+        Bukkit.getLogger().log(Level.INFO, "Bastion has ended ghost block check.");
     }
 
     public Set<QTBox> forLocation(Location loc){
@@ -145,7 +153,7 @@ Iterable<BastionBlock> {
 
     public int update(){
         int count = changed.size();
-        for(BastionBlock toUpdate: changed) toUpdate.update(BastionBlockStorage.db);
+        for(BastionBlock toUpdate: changed) toUpdate.update(storage);
         changed.clear();
         Bastion.getPlugin().getLogger().info("updated " + count + " blocks");
         return count;
@@ -153,7 +161,7 @@ Iterable<BastionBlock> {
 
     @Override
     public boolean add(BastionBlock toAdd) {
-        toAdd.save(BastionBlockStorage.db); //maybe should cache and run in different thread
+        toAdd.save(storage);
 
         bastionBlocks.add(toAdd);
         blocks.get(toAdd.getLocation().getWorld()).add(toAdd);
@@ -161,10 +169,11 @@ Iterable<BastionBlock> {
     }
 
     public boolean remove(BastionBlock toRemove){
-        boolean in_set = false;
-        if(toRemove==null)
+        boolean in_set;
+
+        if(toRemove == null)
             return false;
-        toRemove.delete(BastionBlockStorage.db); //maybe should cache and run in different thread
+        toRemove.delete(storage); //maybe should cache and run in different thread
 
         in_set = bastionBlocks.remove(toRemove);
         changed.remove(toRemove);
@@ -214,11 +223,11 @@ Iterable<BastionBlock> {
     }
     @Override
     public boolean remove(Object in) {
-        if(in==null){
-            return true;
-        } else if(in instanceof BastionBlock){
+        if(in == null){
+            return false;
+        } else if (in instanceof BastionBlock){
             return remove((BastionBlock) in);
-        } else if(in instanceof Location){
+        } else if (in instanceof Location){
             return remove(getBastionBlock((Location) in));
         } else{
             throw new IllegalArgumentException("you didn't provide a BastionBlock or Location");

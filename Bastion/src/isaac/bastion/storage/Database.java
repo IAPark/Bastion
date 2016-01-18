@@ -80,7 +80,7 @@ public class Database {
             this.logger.log(Level.INFO, "Connected to database!");
             return true;
         } catch (SQLException ex) { //Error handling below:
-            this.logger.log(Level.SEVERE, "Could not connnect to the database! Because "+ex.getMessage());
+            this.logger.log(Level.SEVERE, "Could not connect to the database! Because "+ex.getMessage());
             Bukkit.getPluginManager().disablePlugin(Bastion.getPlugin());
             return false;
         }
@@ -95,7 +95,7 @@ public class Database {
         try {
             connection.close();
         } catch (SQLException ex) {
-            this.logger.log(Level.SEVERE, "An error occured while closing the connection.", ex);
+            this.logger.log(Level.SEVERE, "An error occurred while closing the connection.", ex);
         }
     }
 

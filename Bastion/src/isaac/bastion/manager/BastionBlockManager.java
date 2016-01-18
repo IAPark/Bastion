@@ -3,10 +3,12 @@ package isaac.bastion.manager;
 import isaac.bastion.Bastion;
 import isaac.bastion.BastionBlock;
 import isaac.bastion.storage.BastionBlockSet;
+import isaac.bastion.storage.BastionBlockStorage;
 import isaac.bastion.util.QTBox;
 
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.logging.Logger;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -41,8 +43,8 @@ public class BastionBlockManager
 	private static Random generator = new Random();
 
 
-	public BastionBlockManager(){
-		set=new BastionBlockSet();
+	public BastionBlockManager(BastionBlockStorage storage, ConfigManager config, Logger logger){
+		set = new BastionBlockSet(storage, config, logger);
 		set.load();
 	}
 	public void close(){

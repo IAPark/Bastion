@@ -2,6 +2,7 @@ package isaac.bastion;
 
 
 import isaac.bastion.storage.BastionBlockSet;
+import isaac.bastion.storage.BastionBlockDatabase;
 import isaac.bastion.storage.BastionBlockStorage;
 import isaac.bastion.storage.Database;
 import isaac.bastion.util.QTBox;
@@ -133,29 +134,14 @@ public class BastionBlock implements QTBox, Comparable<BastionBlock>
 				erode(1);
 			}
 		},
-		random.nextInt(EROSION_TIME),EROSION_TIME);
+		random.nextInt(EROSION_TIME), EROSION_TIME);
 	}
 
 	//saves a new bastion into the database note will create double entries if bastion already exists
-	public void save(Database db){
+	public void save(BastionBlockStorage storage){
 		if(!inDB){
-			if(!db.isConnected()) {
-				db.connect();
-			}
-			PreparedStatement addBastion = db.prepareStatement("INSERT INTO "+BastionBlockStorage.bationBlocksTable+" (loc_x,loc_y,loc_z,loc_world,placed,fraction) VALUES(?,?,?,?,?,?);");
-			try {
-				addBastion.setInt   (1, location.getBlockX());
-				addBastion.setInt   (2, location.getBlockY());
-				addBastion.setInt   (3, location.getBlockZ());
-				addBastion.setString(4, location.getWorld().getName());
-				addBastion.setLong  (5, placed);
-				addBastion.setDouble(6, balance);
-				addBastion.execute();
-				id = db.getInteger("SELECT LAST_INSERT_ID();");
-				inDB = true;
-			} catch (SQLException e) {
-				e.printStackTrace();
-			}
+			id = storage.save(location, placed, balance);
+			inDB = true;
 		} else {
 			Bastion.getPlugin().getLogger().warning("tried to save BastionBlock that was in DB\n " + toString());
 			
@@ -163,37 +149,23 @@ public class BastionBlock implements QTBox, Comparable<BastionBlock>
 	}
 	
 	//updates placed and balance in db
-	public void update(Database db){
-		if(inDB){
-			if(!db.isConnected()) {
-				db.connect();
-			}
-			PreparedStatement updateBastion = db.prepareStatement("UPDATE "+BastionBlockStorage.bationBlocksTable+" set placed=?,fraction=? where bastion_id=?;");
-			try {
-				updateBastion.setLong(1, placed);
-				updateBastion.setDouble(2, balance);
-				updateBastion.setInt(3, id);
-				updateBastion.execute();
-			} catch (SQLException e) {
-				e.printStackTrace();
-			}
+	public void update(BastionBlockStorage storage){
+		if (inDB){
+			storage.update(location, placed, balance, id);
 		} else {
 			Bastion.getPlugin().getLogger().warning("tried to update BastionBlock that was not in DB\n " + toString());
-			save(db);
+			save(storage);
 		}
 	}
 
-	public void delete(Database db){
-		if(!db.isConnected()) {
-			db.connect();
-		}
-		db.execute("DELETE FROM "+BastionBlockStorage.bationBlocksTable+" WHERE bastion_id="+id+";");
+	public void delete(BastionBlockStorage storage){
+		storage.delete(id);
 		inDB = false;
 	}
 
 
 	/**
-	 * @brief Gets the percentage of the reinforcement that should erode from the block
+	 *  Gets the percentage of the reinforcement that should erode from the block
 	 * @return The percentage that should erode
 	 */
 	public double erosionFromBlock(){

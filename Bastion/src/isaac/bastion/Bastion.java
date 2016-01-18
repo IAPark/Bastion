@@ -3,8 +3,6 @@ package isaac.bastion;
 
 
 
-import java.util.logging.Level;
-
 import isaac.bastion.commands.BastionCommandManager;
 import isaac.bastion.commands.ModeChangeCommand;
 import isaac.bastion.commands.PlayersStates.Mode;
@@ -13,13 +11,10 @@ import isaac.bastion.listeners.CommandListener;
 import isaac.bastion.listeners.EnderPearlListener;
 import isaac.bastion.manager.BastionBlockManager;
 import isaac.bastion.manager.ConfigManager;
-import isaac.bastion.storage.BastionBlockStorage;
-import isaac.bastion.storage.Database;
+import isaac.bastion.storage.BastionBlockDatabase;
 
-import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
-
-
+import org.bukkit.scheduler.BukkitRunnable;
 
 
 public final class Bastion extends JavaPlugin
@@ -28,16 +23,28 @@ public final class Bastion extends JavaPlugin
 	private static Bastion plugin; ///Holds the plugin
 	private static BastionBlockManager bastionManager; ///Most of the direct interaction with Bastions
 	private static ConfigManager config; ///Holds the configuration
+
+	private BukkitRunnable saveTask;
 	
 	public void onEnable()
 	{
 		//set the static variables
 		plugin = this;
 		config = new ConfigManager();
-		bastionManager = new BastionBlockManager();
+		bastionManager = new BastionBlockManager(new BastionBlockDatabase(config, getLogger()), config, getLogger());
+
+		if(Bastion.getPlugin().isEnabled()){
+			saveTask = new BukkitRunnable(){
+				public void run(){
+					bastionManager.set.update();
+				}
+			};
+			saveTask.runTaskTimer(plugin, config.getTimeBetweenSaves(), config.getTimeBetweenSaves());
+		}
+
 		listener = new BastionListener();
 		
-		removeGhostBlocks();
+		bastionManager.set.removeGhostBlocks();
 		
 		if(!this.isEnabled()) //check that the plugin was not disabled in setting up any of the static variables
 			return;
@@ -72,6 +79,7 @@ public final class Bastion extends JavaPlugin
 		if(bastionManager==null)
 			return;
 		bastionManager.close();//saves all Bastion Blocks
+		saveTask.cancel();
 	}
 
 	public static BastionBlockManager getBastionManager()
@@ -88,19 +96,6 @@ public final class Bastion extends JavaPlugin
 	}
 	public static ConfigManager getConfigManager(){
 		return config;
-	}
-	
-	public void removeGhostBlocks(){
-		Database db = BastionBlockStorage.db;
-		Bukkit.getLogger().log(Level.INFO, "Bastion is beginning ghost block check.");
-		for (BastionBlock block: bastionManager.set){
-			if (block.getLocation().getBlock().getType() != config.getBastionBlockMaterial()){
-				Bukkit.getLogger().log(Level.INFO, "Bastion removed a block at: " + block.getLocation() + ". If it is still"
-						+ " there, there is a problem...");
-				block.delete(db);
-			}
-		}
-		Bukkit.getLogger().log(Level.INFO, "Bastion has ended ghost block check.");
 	}
 
 }
