@@ -19,6 +19,7 @@ public class BastionBlockDatabase implements BastionBlockStorage {
     private PreparedStatement getAllBastionsForWorld;
     private PreparedStatement addBastion;
     private PreparedStatement updateBastion;
+	private PreparedStatement deleteBastion;
 
     public BastionBlockDatabase(ConfigManager config, Logger logger) {
         db = new Database(config.getHost(), config.getPort(), config.getDatabase(), config.getUsername(),
@@ -55,7 +56,8 @@ public class BastionBlockDatabase implements BastionBlockStorage {
         getAllBastionsForWorld = db.prepareStatement("SELECT * FROM "+ bastionBlocksTable +" WHERE loc_world=?;");
         addBastion = db.prepareStatement("INSERT INTO "+ BastionBlockDatabase.bastionBlocksTable +" (loc_x,loc_y,loc_z,loc_world,placed,fraction) VALUES(?,?,?,?,?,?);");
         updateBastion = db.prepareStatement("UPDATE "+ BastionBlockDatabase.bastionBlocksTable +" set placed=?,fraction=? where bastion_id=?;");
-    }
+		deleteBastion = db.prepareStatement("DELETE FROM " + BastionBlockDatabase.bastionBlocksTable + " WHERE bastion_id=?");
+	}
 
     public Enumeration<BastionBlock> getAllBastions(World world) {
         return new BastionBlockEnumerator(world);
@@ -73,7 +75,11 @@ public class BastionBlockDatabase implements BastionBlockStorage {
             addBastion.setLong(5, placed);
             addBastion.setDouble(6, balance);
             addBastion.execute();
-            return db.getInteger("SELECT LAST_INSERT_ID();");
+
+			ResultSet generatedKeys = addBastion.getGeneratedKeys();
+			if (generatedKeys.next()) {
+				return (int) generatedKeys.getLong(1);
+			}
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -81,23 +87,37 @@ public class BastionBlockDatabase implements BastionBlockStorage {
     };
 
     // updates placed and balance in db blocking
-    public void update(Location location, long placed, double balance, int id){
+    public boolean update(Location location, long placed, double balance, int id){
         reconnect();
         try {
             updateBastion.setLong(1, placed);
             updateBastion.setDouble(2, balance);
             updateBastion.setInt(3, id);
             updateBastion.execute();
+
+			if (updateBastion.getUpdateCount() > 0) {
+				return true;
+			}
         } catch (SQLException e) {
             e.printStackTrace();
         }
+
+		return false;
     }
 
 	// blocking
-    public void delete(int id){
-        reconnect();
-        db.execute("DELETE FROM " + BastionBlockDatabase.bastionBlocksTable + " WHERE bastion_id=" + id + ";");
-    }
+    public boolean delete(int id){
+		reconnect();
+		try {
+			deleteBastion.setInt(1, id);
+			if (deleteBastion.getUpdateCount() > 0) {
+				return true;
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return false;
+    };
 
     class BastionBlockEnumerator implements Enumeration<BastionBlock> {
         World world;

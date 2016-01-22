@@ -9,8 +9,8 @@ import java.util.Enumeration;
 
 public interface BastionBlockStorage {
     int save(Location location, long placed, double balance);
-    void update(Location location, long placed, double balance, int id);
-    void delete(int id);
+    boolean update(Location location, long placed, double balance, int id);
+    boolean delete(int id);
 
     Enumeration<BastionBlock> getAllBastions(World world);
 }

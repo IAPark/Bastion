@@ -44,12 +44,14 @@ public class BastionBlock implements QTBox, Comparable<BastionBlock>
 
 
 	private Location location; 
-	private int id =-1;
 	private double balance=0; //the amount remaining still to be eroded after the whole part has been removed
 	private int strength; //current durability
 	private long placed; //time when the bastion block was created
-	private boolean inDB = false;
-	private int taskId; //the id of the task associated with erosion
+
+	private volatile boolean inDB = false;
+	private volatile int id = -1;
+
+	private int taskId; // the id of the task associated with erosion
 	private static Random random; //used only to offset the erosion tasks
 	public static BastionBlockSet set; 
 
@@ -138,10 +140,19 @@ public class BastionBlock implements QTBox, Comparable<BastionBlock>
 	}
 
 	//saves a new bastion into the database note will create double entries if bastion already exists
-	public void save(BastionBlockStorage storage){
+	public void save(final BastionBlockStorage storage){
 		if(!inDB){
-			id = storage.save(location, placed, balance);
 			inDB = true;
+			final double balance = this.balance; // balance can change so we'll store the current version and save that
+			new BukkitRunnable() {
+				@Override
+				public void run() {
+					id = storage.save(location, placed, balance);
+					if (id < 0) {
+						inDB = false;
+					}
+				}
+			}.runTaskAsynchronously(Bastion.getPlugin());
 		} else {
 			Bastion.getPlugin().getLogger().warning("tried to save BastionBlock that was in DB\n " + toString());
 			
@@ -149,18 +160,36 @@ public class BastionBlock implements QTBox, Comparable<BastionBlock>
 	}
 	
 	//updates placed and balance in db
-	public void update(BastionBlockStorage storage){
+	public void update(final BastionBlockStorage storage){
 		if (inDB){
-			storage.update(location, placed, balance, id);
+			final double balance = this.balance; // balance can change so we'll store the current version and save that
+
+			// we need to handle database access on another thread
+			new BukkitRunnable() {
+				@Override
+				public void run() {
+					storage.update(location, placed, balance, id);
+				}
+			}.runTaskAsynchronously(Bastion.getPlugin());
 		} else {
-			Bastion.getPlugin().getLogger().warning("tried to update BastionBlock that was not in DB\n " + toString());
+			Bastion.getPlugin().getLogger().warning("tried to update BastionBlock that was not in DB \n " + toString());
 			save(storage);
 		}
 	}
 
-	public void delete(BastionBlockStorage storage){
-		storage.delete(id);
+	public void delete(final BastionBlockStorage storage){
+		if(!inDB) {
+			Bastion.getPlugin().getLogger().warning("tried to delete Bastion that wasn't saved \n " + toString());
+			return;
+		}
+
 		inDB = false;
+		new BukkitRunnable() {
+			@Override
+			public void run() {
+				inDB = !storage.delete(id);
+			}
+		};
 	}
 
 
@@ -190,12 +219,12 @@ public class BastionBlock implements QTBox, Comparable<BastionBlock>
 	}
 
 	public boolean inField(Location loc){
-		if (((loc.getBlockX() - location.getX()) * (float)(loc.getBlockX() - location.getX()) + 
+		if (((loc.getBlockX() - location.getX()) * (float)(loc.getBlockX() - location.getX()) +
 				(loc.getBlockZ() - location.getZ()) * (float)(loc.getBlockZ() - location.getZ()) >= RADIUS_SQUARED)
 				|| (loc.getBlockY() <= location.getY())) {
 			return false;
 		}
-		return true;	
+		return true;
 	}
 	//checks if a player would be allowed to remove the Bastion block
 

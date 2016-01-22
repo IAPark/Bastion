@@ -86,6 +86,10 @@ public class Database {
         }
     }
 
+    public Connection getConnection() {
+        return connection;
+    }
+
     /**
      * Closes the database connection.
      *
