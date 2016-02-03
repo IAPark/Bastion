@@ -1,5 +1,6 @@
 package isaac.bastion.storage;
 
+import isaac.bastion.Bastion;
 import isaac.bastion.BastionBlock;
 import isaac.bastion.manager.ConfigManager;
 
@@ -11,6 +12,8 @@ import java.util.logging.Logger;
 
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.plugin.Plugin;
+import org.bukkit.scheduler.BukkitRunnable;
 
 public class BastionBlockDatabase implements BastionBlockStorage {
     private Database db;
@@ -21,7 +24,9 @@ public class BastionBlockDatabase implements BastionBlockStorage {
     private PreparedStatement updateBastion;
 	private PreparedStatement deleteBastion;
 
-    public BastionBlockDatabase(ConfigManager config, Logger logger) {
+    private Plugin plugin;
+
+    public BastionBlockDatabase(ConfigManager config, Logger logger, Plugin plugin) {
         db = new Database(config.getHost(), config.getPort(), config.getDatabase(), config.getUsername(),
                 config.getPassword(), config.getPrefix(), logger);
 
@@ -30,6 +35,7 @@ public class BastionBlockDatabase implements BastionBlockStorage {
         if (db.isConnected()) {
             initialize();
         }
+        this.plugin = plugin;
     }
 
 	// Check if database is connected and if not reconnect. BLOCKING
@@ -58,6 +64,36 @@ public class BastionBlockDatabase implements BastionBlockStorage {
         updateBastion = db.prepareStatement("UPDATE "+ BastionBlockDatabase.bastionBlocksTable +" set placed=?,fraction=? where bastion_id=?;");
 		deleteBastion = db.prepareStatement("DELETE FROM " + BastionBlockDatabase.bastionBlocksTable + " WHERE bastion_id=?");
 	}
+
+    @Override
+    public void save(final Location location, final long placed, final double balance,final SaveListener saveListener) {
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                saveListener.saved(save(location, placed, balance));
+            }
+        }.runTaskAsynchronously(plugin);
+    }
+
+    @Override
+    public void update(final Location location, final long placed, final double balance, final int id, final UpdateListener updateListener) {
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                updateListener.updated(update(location, placed, balance, id));
+            }
+        }.runTaskAsynchronously(plugin);
+    }
+
+    @Override
+    public void delete(final int id, final DeleteListener deleteListener) {
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                deleteListener.deleted(delete(id));
+            }
+        }.runTaskAsynchronously(plugin);
+    }
 
     public Enumeration<BastionBlock> getAllBastions(World world) {
         return new BastionBlockEnumerator(world);

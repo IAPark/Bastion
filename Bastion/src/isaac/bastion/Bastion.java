@@ -31,7 +31,7 @@ public final class Bastion extends JavaPlugin
 		//set the static variables
 		plugin = this;
 		config = new ConfigManager();
-		bastionManager = new BastionBlockManager(new BastionBlockDatabase(config, getLogger()), config, getLogger());
+		bastionManager = new BastionBlockManager(new BastionBlockDatabase(config, getLogger(), plugin), config, getLogger());
 
 		if(Bastion.getPlugin().isEnabled()){
 			saveTask = new BukkitRunnable(){

@@ -144,15 +144,15 @@ public class BastionBlock implements QTBox, Comparable<BastionBlock>
 		if(!inDB){
 			inDB = true;
 			final double balance = this.balance; // balance can change so we'll store the current version and save that
-			new BukkitRunnable() {
+
+			storage.save(location, placed, balance, new BastionBlockStorage.SaveListener() {
 				@Override
-				public void run() {
-					id = storage.save(location, placed, balance);
+				public void saved(int id) {
 					if (id < 0) {
 						inDB = false;
 					}
 				}
-			}.runTaskAsynchronously(Bastion.getPlugin());
+			});
 		} else {
 			Bastion.getPlugin().getLogger().warning("tried to save BastionBlock that was in DB\n " + toString());
 			
@@ -164,13 +164,12 @@ public class BastionBlock implements QTBox, Comparable<BastionBlock>
 		if (inDB){
 			final double balance = this.balance; // balance can change so we'll store the current version and save that
 
-			// we need to handle database access on another thread
-			new BukkitRunnable() {
+			storage.update(location, placed, balance, id, new BastionBlockStorage.UpdateListener() {
 				@Override
-				public void run() {
-					storage.update(location, placed, balance, id);
+				public void updated(boolean worked) {
+
 				}
-			}.runTaskAsynchronously(Bastion.getPlugin());
+			});
 		} else {
 			Bastion.getPlugin().getLogger().warning("tried to update BastionBlock that was not in DB \n " + toString());
 			save(storage);
@@ -183,13 +182,12 @@ public class BastionBlock implements QTBox, Comparable<BastionBlock>
 			return;
 		}
 
-		inDB = false;
-		new BukkitRunnable() {
+		storage.delete(id, new BastionBlockStorage.DeleteListener() {
 			@Override
-			public void run() {
-				inDB = !storage.delete(id);
+			public void deleted(boolean worked) {
+				inDB = !worked;
 			}
-		}.runTaskAsynchronously(Bastion.getPlugin());
+		});
 	}
 
 
