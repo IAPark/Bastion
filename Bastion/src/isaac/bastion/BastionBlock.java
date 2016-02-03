@@ -189,7 +189,7 @@ public class BastionBlock implements QTBox, Comparable<BastionBlock>
 			public void run() {
 				inDB = !storage.delete(id);
 			}
-		};
+		}.runTaskAsynchronously(Bastion.getPlugin());
 	}
 
 
